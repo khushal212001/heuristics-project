@@ -77,7 +77,9 @@ def weighted_astar_search(
         )
 
     # Heuristic evaluation (optionally memoized, for ablation).
-    # Use an array cache for speed (dict overhead can dominate for cheap heuristics).
+    # Memoization is used in the ablation experiment to isolate caching impact.
+    # We use a 2D array cache because dict overhead can dominate for cheap heuristics
+    # like Manhattan distance.
     rows = len(grid)
     cols = len(grid[0]) if rows else 0
     heuristic_evals = 0
@@ -91,6 +93,7 @@ def weighted_astar_search(
     def h(node: Coord) -> int:
         nonlocal heuristic_evals
         if not config.memoize_heuristic:
+            # No-memo variant: every call is a real heuristic computation.
             heuristic_evals += 1
             return heuristic(node, goal)
 
@@ -98,6 +101,7 @@ def weighted_astar_search(
             r, c = node
             v = h_cache_arr[r][c]
             if v == -1:
+                # Cache miss: compute and store.
                 heuristic_evals += 1
                 v = heuristic(node, goal)
                 h_cache_arr[r][c] = v
@@ -112,19 +116,24 @@ def weighted_astar_search(
         return v2
 
     def w_eff(expanded: int) -> float:
+        # Effective weight schedule.
         if not config.dynamic_weight:
             return config.weight
         w = config.weight - config.weight_decay_per_1000 * (expanded / 1000.0)
         return max(config.weight_min, w)
 
+    # OPEN set is a heap ordered by f = g + w*h.
     open_heap: List[Tuple[float, float, Coord]] = []
     came_from: Dict[Coord, Coord] = {}
     g_score: Dict[Coord, int] = {start: 0}
+    # CLOSED set: expanded nodes.
     closed: set[Coord] = set()
 
     def tie_value(node: Coord) -> float:
         if config.tie_breaker == "h":
+            # Prefer smaller heuristic values on ties.
             return float(h(node))
+        # Prefer deeper nodes on ties (larger g).
         return -float(g_score.get(node, 0))
 
     heapq.heappush(open_heap, (0.0 + w_eff(0) * h(start), tie_value(start), start))
@@ -134,6 +143,7 @@ def weighted_astar_search(
     while open_heap:
         f, _, current = heapq.heappop(open_heap)
         if current in closed:
+            # Skip stale heap entries.
             continue
         closed.add(current)
         nodes_expanded += 1
@@ -158,6 +168,7 @@ def weighted_astar_search(
             tentative_g = cur_g + 1
             best_g = g_score.get(nxt)
             if best_g is None or tentative_g < best_g:
+                # Found an improved path to nxt.
                 came_from[nxt] = current
                 g_score[nxt] = tentative_g
                 heapq.heappush(open_heap, (tentative_g + w_eff(nodes_expanded) * h(nxt), tie_value(nxt), nxt))

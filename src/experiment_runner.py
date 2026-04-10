@@ -63,6 +63,7 @@ def _solve_with_retry(
     until a path exists (bounded by max_attempts).
     """
 
+    # Deterministic RNG for reproducibility.
     rng = random.Random(seed)
     last_result: Optional[SearchResult] = None
     for attempt in range(max_attempts):
@@ -103,10 +104,12 @@ def _solve_with_retry(
 
         last_result = result
         if result.found:
+            # Only keep solvable instances in the experimental dataset.
             meta = {"attempt": attempt + 1}
             return result, meta
 
         # Re-seed slightly to vary grids but remain deterministic per (seed, attempt).
+        # This avoids a hard failure when a particular seed yields an unsolvable grid.
         rng.seed(seed + 1000 * (attempt + 1))
 
     # If unsolved, return last result and mark as failure.
@@ -130,6 +133,7 @@ class ExperimentRunner:
     def run_single(self, run: RunSpec) -> SearchResult:
         """Run one solver execution and record a CSV row."""
 
+        # run_id is globally unique across the full pipeline to simplify grading/analysis.
         run_id = run.run_id
         if run_id is None:
             run_id = self._run_id_counter
@@ -148,6 +152,7 @@ class ExperimentRunner:
             tie_breaker=run.tie_breaker,
         )
 
+        # Per-run row (rubric required fields + analysis extras).
         row: Dict[str, object] = {
             # Required rubric fields
             "algorithm": run.algorithm,
@@ -187,6 +192,7 @@ class ExperimentRunner:
     def _metric_stats(self, rows: List[Dict[str, object]], key: str) -> Dict[str, float]:
         """Compute mean, stddev, and CI95 half-width for a metric."""
 
+        # CI uses a normal approximation; with n>=10 it is a reasonable indicator.
         vals = self._metric_values(rows, key)
         return {
             "mean": mean(vals),
@@ -210,6 +216,7 @@ class ExperimentRunner:
         baseline_nodes: List[float] = []
         enhanced_nodes: List[float] = []
 
+        # Enhanced variant: either fixed WA* or dynamic-weight WA*.
         enhanced_algo = "enhanced_weighted_astar_dynamic" if use_dynamic_weight else "enhanced_weighted_astar"
 
         for i in range(runs):
@@ -375,6 +382,7 @@ class ExperimentRunner:
         sizes = sorted({int(r["input_size"]) for r in self.rows})
         algos = sorted({str(r["algorithm"]) for r in self.rows})
 
+        # Summaries are used for report-ready tables and to compute improvement %.
         for size in sizes:
             baseline_rows = [r for r in self.rows if str(r["algorithm"]) == baseline_algo and int(r["input_size"]) == size]
             if not baseline_rows:
@@ -470,6 +478,7 @@ class ExperimentRunner:
         enhanced_err = [m[4] for m in metrics]
 
         width = 0.35
+        # Error bars are standard deviation across runs.
         ax.bar([i - width / 2 for i in x], baseline_vals, width=width, label="Baseline A*", yerr=baseline_err, capsize=4)
         ax.bar([i + width / 2 for i in x], enhanced_vals, width=width, label="Enhanced", yerr=enhanced_err, capsize=4)
 
@@ -489,6 +498,7 @@ class ExperimentRunner:
         ensure_dirs()
         fig, ax = plt.subplots(figsize=(8, 4))
 
+        # Plot mean with stddev error bars per input size.
         for algorithm, label in [("baseline_astar", "Baseline A*"), ("enhanced_weighted_astar_dynamic", "Enhanced (Dynamic WA*)")]:
             times = []
             times_std = []
@@ -538,6 +548,7 @@ class ExperimentRunner:
         if not rows:
             raise ValueError("No rows for sensitivity plot")
 
+        # Weight sweep points (WA* only).
         weights = sorted({float(r.get("weight", 0.0)) for r in rows if "weight" in r})
         times = []
         times_std = []
@@ -588,6 +599,7 @@ class ExperimentRunner:
         time_impr: List[float] = []
         nodes_impr: List[float] = []
 
+        # Improvement is computed vs baseline means at each input size.
         for size in sizes:
             b = [r for r in self.rows if r.get("algorithm") == "baseline_astar" and int(r.get("input_size")) == size]
             e = [r for r in self.rows if r.get("algorithm") == "enhanced_weighted_astar_dynamic" and int(r.get("input_size")) == size]

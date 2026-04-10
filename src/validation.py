@@ -43,6 +43,7 @@ def validate_path(grid: Grid, start: Coord, goal: Coord, path: Sequence[Coord]) 
     rows = len(grid)
     cols = len(grid[0]) if rows else 0
 
+    # Cell-wise feasibility: must remain in bounds and avoid obstacles.
     for p in path:
         r, c = p
         if not (0 <= r < rows and 0 <= c < cols):
@@ -50,6 +51,7 @@ def validate_path(grid: Grid, start: Coord, goal: Coord, path: Sequence[Coord]) 
         if grid[r][c] != 0:
             return PathValidity(False, f"path crosses obstacle at {p}")
 
+    # Step feasibility: must be 4-connected moves (no diagonals).
     for a, b in zip(path, path[1:]):
         if abs(a[0] - b[0]) + abs(a[1] - b[1]) != 1:
             return PathValidity(False, "path is not 4-connected")
@@ -67,6 +69,8 @@ def bfs_shortest_path_cost(grid: Grid, start: Coord, goal: Coord) -> Optional[in
     if start == goal:
         return 0
 
+    # BFS explores the state space in increasing path length, guaranteeing optimality
+    # for unit edge costs.
     q: Deque[Coord] = deque([start])
     dist: Dict[Coord, int] = {start: 0}
 
@@ -85,6 +89,8 @@ def bfs_shortest_path_cost(grid: Grid, start: Coord, goal: Coord) -> Optional[in
 def assert_optimal_vs_bfs_small(grid: Grid, start: Coord, goal: Coord, path_cost: int) -> None:
     """Assert A* optimality by comparing to BFS optimal cost on small grids."""
 
+    # BFS provides a ground-truth shortest path cost; A* should match it under an
+    # admissible heuristic (Manhattan) on this unweighted grid.
     optimal = bfs_shortest_path_cost(grid, start, goal)
     if optimal is None:
         raise AssertionError("BFS found no path; test grid expected solvable")

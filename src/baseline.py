@@ -59,14 +59,23 @@ def astar_search(
         heuristic_evals += 1
         return heuristic(node, goal)
 
+    # OPEN set stored as a priority queue (min-heap) ordered by f = g + h.
+    # Each entry: (f_score, tie_value, node)
     open_heap: List[Tuple[float, float, Coord]] = []
+
+    # For path reconstruction.
     came_from: Dict[Coord, Coord] = {}
+
+    # Best known cost-to-come for each discovered node.
     g_score: Dict[Coord, int] = {start: 0}
+
+    # CLOSED set: nodes we've expanded (popped for expansion) already.
     closed: set[Coord] = set()
 
     h0 = h(start)
 
     # Priority: (f, tie, node). tie is used for deterministic tie-breaking.
+    # This does not affect correctness, but can change runtime by affecting expansion order.
     def tie_value(node: Coord) -> float:
         if config.tie_breaker == "h":
             return float(h(node))
@@ -80,6 +89,7 @@ def astar_search(
     while open_heap:
         f, _, current = heapq.heappop(open_heap)
         if current in closed:
+            # Stale heap entry (a better path to this node was found later).
             continue
         closed.add(current)
         nodes_expanded += 1
@@ -104,6 +114,7 @@ def astar_search(
             tentative_g = cur_g + 1
             best_g = g_score.get(nxt)
             if best_g is None or tentative_g < best_g:
+                # Found a strictly better path to nxt.
                 came_from[nxt] = current
                 g_score[nxt] = tentative_g
                 hn = h(nxt)
