@@ -66,3 +66,19 @@ def pairwise(values: Iterable[T]) -> Iterator[Tuple[T, T]]:
     for x in it:
         yield prev, x
         prev = x
+
+
+def chunked(values: Iterable[T], size: int) -> Iterator[Tuple[T, ...]]:
+    """Yield tuples of length size (last chunk may be shorter)."""
+
+    if size <= 0:
+        raise ValueError("size must be positive")
+
+    buf = []
+    for x in values:
+        buf.append(x)
+        if len(buf) == size:
+            yield tuple(buf)
+            buf.clear()
+    if buf:
+        yield tuple(buf)
