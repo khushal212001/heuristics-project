@@ -91,3 +91,13 @@ def flatten(chunks: Iterable[Sequence[T]]) -> list[T]:
     for seq in chunks:
         out.extend(seq)
     return out
+
+
+def rotate_left(values: Sequence[T], k: int) -> list[T]:
+    """Return a new list rotated left by k steps."""
+
+    if not values:
+        return []
+    n = len(values)
+    kk = k % n
+    return list(values[kk:]) + list(values[:kk])
