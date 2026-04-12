@@ -8,7 +8,7 @@ All functions are pure (no I/O, no mutation of external state).
 
 from __future__ import annotations
 
-from typing import Iterable, Iterator, Tuple, TypeVar
+from typing import Iterable, Iterator, Sequence, Tuple, TypeVar
 
 
 T = TypeVar("T")
@@ -82,3 +82,12 @@ def chunked(values: Iterable[T], size: int) -> Iterator[Tuple[T, ...]]:
             buf.clear()
     if buf:
         yield tuple(buf)
+
+
+def flatten(chunks: Iterable[Sequence[T]]) -> list[T]:
+    """Flatten an iterable of sequences into a single list."""
+
+    out: list[T] = []
+    for seq in chunks:
+        out.extend(seq)
+    return out
