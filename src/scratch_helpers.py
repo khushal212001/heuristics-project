@@ -8,7 +8,7 @@ All functions are pure (no I/O, no mutation of external state).
 
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Iterable, TypeVar
 
 
 T = TypeVar("T")
@@ -38,3 +38,18 @@ def safe_div(numerator: float, denominator: float, *, default: float = 0.0) -> f
     if denominator == 0:
         return default
     return numerator / denominator
+
+
+def is_sorted(values: Iterable[float]) -> bool:
+    """Return True if the iterable is non-decreasing."""
+
+    it = iter(values)
+    try:
+        prev = next(it)
+    except StopIteration:
+        return True
+    for x in it:
+        if x < prev:
+            return False
+        prev = x
+    return True
