@@ -107,3 +107,11 @@ def normalize_whitespace(text: str) -> str:
     """Collapse runs of whitespace to single spaces and strip ends."""
 
     return " ".join(text.split())
+
+
+def parse_int(text: str) -> int:
+    """Parse an integer from text, rejecting surrounding whitespace."""
+
+    if text != text.strip():
+        raise ValueError("unexpected surrounding whitespace")
+    return int(text)
