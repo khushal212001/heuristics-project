@@ -8,7 +8,7 @@ All functions are pure (no I/O, no mutation of external state).
 
 from __future__ import annotations
 
-from typing import Iterable, TypeVar
+from typing import Iterable, Iterator, Tuple, TypeVar
 
 
 T = TypeVar("T")
@@ -53,3 +53,16 @@ def is_sorted(values: Iterable[float]) -> bool:
             return False
         prev = x
     return True
+
+
+def pairwise(values: Iterable[T]) -> Iterator[Tuple[T, T]]:
+    """Yield consecutive pairs: (v0,v1), (v1,v2), ..."""
+
+    it = iter(values)
+    try:
+        prev = next(it)
+    except StopIteration:
+        return
+    for x in it:
+        yield prev, x
+        prev = x
