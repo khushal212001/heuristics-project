@@ -30,3 +30,11 @@ def clamp(value: float, low: float, high: float) -> float:
     if value > high:
         return high
     return value
+
+
+def safe_div(numerator: float, denominator: float, *, default: float = 0.0) -> float:
+    """Return numerator/denominator, or default if denominator is 0."""
+
+    if denominator == 0:
+        return default
+    return numerator / denominator
