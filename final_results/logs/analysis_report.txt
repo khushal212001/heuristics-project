@@ -1,0 +1,122 @@
+=== DATA OVERVIEW ===
+
+Total runs: 1110
+Number of experiments: 7
+Experiments: exp1_baseline_vs_enhanced, exp2_scaling, exp3_weight_sensitivity, exp4_ablation_memoization, exp5_obstacle_density, exp6_heuristic_comparison, exp7_tiebreaking
+Algorithms used: adaptive, astar, wastar
+Grid sizes used: 100, 20, 40, 60, 80
+
+=== PERFORMANCE SUMMARY ===
+
+Algorithm: adaptive
+Avg Time: 0.001445 s
+Avg Nodes: 298.15
+
+Algorithm: astar
+Avg Time: 0.003138 s
+Avg Nodes: 709.23
+
+Algorithm: wastar
+Avg Time: 0.000906 s
+Avg Nodes: 147.24
+
+=== IMPROVEMENTS ===
+
+All improvements are computed from aggregated means (not single runs).
+
+Baseline vs Full Enhanced (Exp1):
+- Avg node improvement %: 51.47% (pairs=1)
+- Avg time improvement %: 27.86% (pairs=1)
+
+Baseline vs Adaptive (Exp5):
+- Avg node improvement %: 29.08% (pairs=4)
+- Avg time improvement %: 23.86% (pairs=4)
+
+Baseline vs WA* (Exp3):
+- Avg node improvement %: 44.72% (baseline=w=1.0, best_w=2.50)
+- Avg time improvement %: 42.04% (baseline=w=1.0, best_w=2.50)
+
+Conclusion:
+Enhanced methods outperform baseline in average performance across all test conditions.
+
+=== DENSITY ANALYSIS ===
+
+Compared density_adaptive vs baseline over 4 grouped cases.
+Ever worse than baseline (time OR nodes): NO
+% cases better than baseline (time AND nodes): 100.00%
+Avg time improvement: 23.86%
+Avg node improvement: 29.08%
+
+=== MEMOIZATION ===
+
+Scope: exp4_ablation_memoization
+Avg heuristic_calls with memo: 204.07
+Avg heuristic_calls without memo: 213.43
+% reduction in heuristic_calls: 4.39%
+Avg execution_time with memo: 0.000665 s
+Avg execution_time without memo: 0.000615 s
+% time improvement with memo: -8.12%
+Interpretation: Memoization reduces computational redundancy but has limited runtime impact due to Python execution overhead dominating performance.
+
+=== TIE-BREAKING ===
+
+Scope: exp7_tiebreaking
+Avg time (tiebreak OFF): 0.000998 s
+Avg time (tiebreak ON):  0.000968 s
+% time difference (ON vs OFF): -3.01%
+Avg nodes (tiebreak OFF): 139.80
+Avg nodes (tiebreak ON):  139.80
+% nodes difference (ON vs OFF): 0.00%
+Avg tie-break events (OFF): 22.23
+Avg tie-break events (ON):  22.23
+Interpretation: Tie-breaking has limited impact because strong heuristic guidance reduces the number of equal-cost node expansions.
+
+=== WEIGHT SENSITIVITY ===
+
+Nodes expanded by weight (mean):
+- w=1.00: nodes=199.17
+- w=1.20: nodes=140.10
+- w=1.40: nodes=122.60
+- w=1.60: nodes=118.30
+- w=2.00: nodes=111.53
+- w=2.50: nodes=110.10
+Monotonic check: OK (nodes non-increasing with weight)
+
+=== HEURISTIC COMPARISON ===
+
+Best heuristic (lowest nodes, tie-break by time): manhattan
+Ranking:
+1. manhattan: nodes=362.67, time=0.001668 s
+2. hybrid_a0.7: nodes=1963.57, time=0.008616 s
+3. euclidean: nodes=2423.20, time=0.009457 s
+
+Interpretation: The large difference is due to Manhattan distance being more aligned with 4-directional movement, whereas Euclidean underestimates cost in grid-based environments.
+
+=== BEST CONFIGURATION ===
+
+Best Overall Configuration (averaged over runs):
+- algorithm: wastar
+- heuristic: manhattan
+- weight: 2.5
+- mean_nodes_expanded: 110.10
+- mean_execution_time: 0.000582 s
+- score (norm_time + norm_nodes): 0.1070
+- n_runs: 30
+- enhancements: memoization=1, dynamic_weight=0, tiebreaking=1, density_adaptive=0
+
+Best Enhanced Configuration (baseline-only excluded):
+- algorithm: wastar
+- heuristic: manhattan
+- weight: 2.5
+- mean_nodes_expanded: 110.10
+- mean_execution_time: 0.000582 s
+- score (norm_time + norm_nodes): 0.1070
+- n_runs: 30
+- enhancements: memoization=1, dynamic_weight=0, tiebreaking=1, density_adaptive=0
+
+=== ANOMALIES ===
+
+WARNING: Major anomalies observed in 1 cases (>10% worse than baseline).
+- exp2_scaling cond=enhanced_combo: nodes +0.0%, time +14.3%
+
+No minor (<10%) underperformance cases detected.

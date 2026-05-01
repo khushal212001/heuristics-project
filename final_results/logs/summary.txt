@@ -1,0 +1,28 @@
+CS572 Final Project — Analytics Summary (from CSVs)
+
+Best Overall Configuration (averaged):
+- algorithm=wastar, heuristic=manhattan, weight=2.5
+- mean_time=0.000582 s, mean_nodes=110.10
+- score=0.1070
+
+Best Enhanced Configuration (averaged; baseline-only excluded):
+- algorithm=wastar, heuristic=manhattan, weight=2.5
+- mean_time=0.000582 s, mean_nodes=110.10
+- score=0.1070
+- enhancements: use_memoization=1, use_dynamic_weight=0, use_tiebreaking=1, use_density_adaptive=0
+
+Average improvements (aggregated means across available baseline vs non-baseline comparisons):
+- avg_nodes_improvement_pct=42.91%
+- avg_time_improvement_pct=27.92%
+
+Key validated insights:
+- WA* reduces nodes significantly (see Exp3 weight sensitivity and Exp1 improvements).
+- Performance vs scale: improvement increases with scale (Exp2)
+- Density-adaptive improves robustness (ever worse vs baseline: NO).
+
+Density summary:
+Compared density_adaptive vs baseline over 4 grouped cases.
+Ever worse than baseline (time OR nodes): NO
+% cases better than baseline (time AND nodes): 100.00%
+Avg time improvement: 23.86%
+Avg node improvement: 29.08%
