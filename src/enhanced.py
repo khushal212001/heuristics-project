@@ -35,7 +35,7 @@ def weighted_astar_search(
     grid: Grid,
     start: Coord,
     goal: Coord,
-    heuristic: Callable[[Coord, Coord], int] = manhattan,
+    heuristic: Callable[[Coord, Coord], float] = manhattan,
     config: Optional[WeightedAStarConfig] = None,
 ) -> SearchResult:
     """Run Weighted A* search.
@@ -83,27 +83,28 @@ def weighted_astar_search(
     rows = len(grid)
     cols = len(grid[0]) if rows else 0
     heuristic_evals = 0
-    h_cache_arr: Optional[List[List[int]]] = None
-    h_cache_dict: Optional[Dict[Coord, int]] = None
+    tie_breaks = 0
+    h_cache_arr: Optional[List[List[Optional[float]]]] = None
+    h_cache_dict: Optional[Dict[Coord, float]] = None
     if config.memoize_heuristic and rows > 0 and cols > 0:
-        h_cache_arr = [[-1 for _ in range(cols)] for _ in range(rows)]
+        h_cache_arr = [[None for _ in range(cols)] for _ in range(rows)]
     elif config.memoize_heuristic:
         h_cache_dict = {}
 
-    def h(node: Coord) -> int:
+    def h(node: Coord) -> float:
         nonlocal heuristic_evals
         if not config.memoize_heuristic:
             # No-memo variant: every call is a real heuristic computation.
             heuristic_evals += 1
-            return heuristic(node, goal)
+            return float(heuristic(node, goal))
 
         if h_cache_arr is not None:
             r, c = node
             v = h_cache_arr[r][c]
-            if v == -1:
+            if v is None:
                 # Cache miss: compute and store.
                 heuristic_evals += 1
-                v = heuristic(node, goal)
+                v = float(heuristic(node, goal))
                 h_cache_arr[r][c] = v
             return v
 
@@ -111,7 +112,7 @@ def weighted_astar_search(
         v2 = h_cache_dict.get(node)
         if v2 is None:
             heuristic_evals += 1
-            v2 = heuristic(node, goal)
+            v2 = float(heuristic(node, goal))
             h_cache_dict[node] = v2
         return v2
 
@@ -123,25 +124,30 @@ def weighted_astar_search(
         return max(config.weight_min, w)
 
     # OPEN set is a heap ordered by f = g + w*h.
+    # Each entry: (f_score, secondary_key, node)
     open_heap: List[Tuple[float, float, Coord]] = []
+    f_counts: Dict[float, int] = {}
     came_from: Dict[Coord, Coord] = {}
     g_score: Dict[Coord, int] = {start: 0}
     # CLOSED set: expanded nodes.
     closed: set[Coord] = set()
 
-    def tie_value(node: Coord) -> float:
-        if config.tie_breaker == "h":
-            # Prefer smaller heuristic values on ties.
-            return float(h(node))
-        # Prefer deeper nodes on ties (larger g).
-        return -float(g_score.get(node, 0))
-
-    heapq.heappush(open_heap, (0.0 + w_eff(0) * h(start), tie_value(start), start))
+    h0 = h(start)
+    f0 = 0.0 + w_eff(0) * h0
+    secondary0 = h0 if config.tie_breaker == "h" else -0.0
+    if f_counts.get(f0, 0) > 0:
+        tie_breaks += 1
+    f_counts[f0] = f_counts.get(f0, 0) + 1
+    heapq.heappush(open_heap, (f0, secondary0, start))
 
     nodes_expanded = 0
 
     while open_heap:
         f, _, current = heapq.heappop(open_heap)
+        if f in f_counts:
+            f_counts[f] -= 1
+            if f_counts[f] <= 0:
+                del f_counts[f]
         if current in closed:
             # Skip stale heap entries.
             continue
@@ -158,6 +164,7 @@ def weighted_astar_search(
                 nodes_expanded=nodes_expanded,
                 execution_time_s=t1 - t0,
                 heuristic_evals=heuristic_evals,
+                tie_breaks=tie_breaks,
             )
 
         cur_g = g_score[current]
@@ -171,7 +178,13 @@ def weighted_astar_search(
                 # Found an improved path to nxt.
                 came_from[nxt] = current
                 g_score[nxt] = tentative_g
-                heapq.heappush(open_heap, (tentative_g + w_eff(nodes_expanded) * h(nxt), tie_value(nxt), nxt))
+                hn = h(nxt)
+                fn = float(tentative_g) + w_eff(nodes_expanded) * hn
+                secondary = hn if config.tie_breaker == "h" else -float(tentative_g)
+                if f_counts.get(fn, 0) > 0:
+                    tie_breaks += 1
+                f_counts[fn] = f_counts.get(fn, 0) + 1
+                heapq.heappush(open_heap, (fn, secondary, nxt))
 
     t1 = now_s()
     return SearchResult(
@@ -181,4 +194,5 @@ def weighted_astar_search(
         nodes_expanded=nodes_expanded,
         execution_time_s=t1 - t0,
         heuristic_evals=heuristic_evals,
+        tie_breaks=tie_breaks,
     )
