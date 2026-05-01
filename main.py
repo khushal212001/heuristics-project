@@ -13,12 +13,16 @@ Runs:
 
 from __future__ import annotations
 
+import argparse
+
 from src.experiment_runner import GridSpec, default_experiments
 from src.utils import ensure_dirs, project_root
 from tests.test_cases import run_all_tests, run_validation_suite
 
 
-def main() -> None:
+def run_milestone_pipeline() -> None:
+    """Run the original Milestone 2 pipeline (kept for backwards compatibility)."""
+
     ensure_dirs()
 
     # 1) Correctness tests
@@ -127,6 +131,42 @@ def main() -> None:
         print(f"  - time improvement vs no-memo: {ab['time_improvement_pct']:.2f}%")
         print(f"  - nodes improvement vs no-memo: {ab['nodes_improvement_pct']:.2f}%")
         print(f"  - heuristic eval reduction vs no-memo: {ab['heuristic_evals_reduction_pct']:.2f}%")
+
+
+def run_final_pipeline(*, runs: int = 30, seed: int = 1337, which: str = "final") -> None:
+    """Run the Final Project pipeline (writes outputs under final_results/)."""
+
+    from src.experiments.final_runner import run_final_suite
+
+    run_final_suite(runs=runs, base_seed=seed, which=which)
+    root = project_root() / "final_results"
+    print("[OK] Final pipeline complete")
+    print(f"- CSV summary: {root / 'csv' / 'final_results.csv'}")
+    print(f"- CSV runs:    {root / 'csv' / 'final_runs.csv'}")
+    print(f"- Plots:       {root / 'plots'}")
+    print(f"- Summary:     {root / 'logs' / 'summary.txt'}")
+    print(f"- Notes:       {project_root() / 'report_final_notes.md'}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="CS572 Heuristic Problem Solving (Milestone 2 + Final Project)")
+    parser.add_argument("--final", action="store_true", help="Run the full final-project suite (>=5 experiments, n>=30)")
+    parser.add_argument(
+        "--experiment",
+        type=str,
+        default=None,
+        help="Run a single final experiment: exp1|exp2|exp3|exp4|exp5|exp6|exp7",
+    )
+    parser.add_argument("--runs", type=int, default=30, help="Runs per condition (final rubric requires >=30)")
+    parser.add_argument("--seed", type=int, default=1337, help="Base seed for reproducibility")
+    args = parser.parse_args()
+
+    if args.final or args.experiment is not None:
+        which = args.experiment if args.experiment is not None else "final"
+        run_final_pipeline(runs=int(args.runs), seed=int(args.seed), which=str(which))
+        return
+
+    run_milestone_pipeline()
 
 
 if __name__ == "__main__":
