@@ -53,15 +53,19 @@ def astar_search(
         )
 
     heuristic_evals = 0
+    tie_breaks = 0
 
-    def h(node: Coord) -> int:
+    def h(node: Coord) -> float:
         nonlocal heuristic_evals
         heuristic_evals += 1
-        return heuristic(node, goal)
+        return float(heuristic(node, goal))
 
     # OPEN set stored as a priority queue (min-heap) ordered by f = g + h.
-    # Each entry: (f_score, tie_value, node)
+    # Each entry: (f_score, secondary_key, node)
     open_heap: List[Tuple[float, float, Coord]] = []
+
+    # Track duplicate f-scores so tie-breaking events are measurable.
+    f_counts: Dict[float, int] = {}
 
     # For path reconstruction.
     came_from: Dict[Coord, Coord] = {}
@@ -73,21 +77,22 @@ def astar_search(
     closed: set[Coord] = set()
 
     h0 = h(start)
-
-    # Priority: (f, tie, node). tie is used for deterministic tie-breaking.
-    # This does not affect correctness, but can change runtime by affecting expansion order.
-    def tie_value(node: Coord) -> float:
-        if config.tie_breaker == "h":
-            return float(h(node))
-        # Default "g": prefer larger g (deeper) to reduce re-expansions.
-        return -float(g_score.get(node, 0))
-
-    heapq.heappush(open_heap, (h0, tie_value(start), start))
+    f0 = 0.0 + h0
+    secondary0 = h0 if config.tie_breaker == "h" else -0.0
+    if f_counts.get(f0, 0) > 0:
+        tie_breaks += 1
+    f_counts[f0] = f_counts.get(f0, 0) + 1
+    heapq.heappush(open_heap, (f0, secondary0, start))
 
     nodes_expanded = 0
 
     while open_heap:
         f, _, current = heapq.heappop(open_heap)
+        # Maintain f_counts to keep tie-breaking event count meaningful.
+        if f in f_counts:
+            f_counts[f] -= 1
+            if f_counts[f] <= 0:
+                del f_counts[f]
         if current in closed:
             # Stale heap entry (a better path to this node was found later).
             continue
@@ -104,6 +109,7 @@ def astar_search(
                 nodes_expanded=nodes_expanded,
                 execution_time_s=t1 - t0,
                 heuristic_evals=heuristic_evals,
+                tie_breaks=tie_breaks,
             )
 
         cur_g = g_score[current]
@@ -118,7 +124,12 @@ def astar_search(
                 came_from[nxt] = current
                 g_score[nxt] = tentative_g
                 hn = h(nxt)
-                heapq.heappush(open_heap, (tentative_g + hn, tie_value(nxt), nxt))
+                fn = float(tentative_g) + hn
+                secondary = hn if config.tie_breaker == "h" else -float(tentative_g)
+                if f_counts.get(fn, 0) > 0:
+                    tie_breaks += 1
+                f_counts[fn] = f_counts.get(fn, 0) + 1
+                heapq.heappush(open_heap, (fn, secondary, nxt))
 
     t1 = now_s()
     return SearchResult(
@@ -128,4 +139,5 @@ def astar_search(
         nodes_expanded=nodes_expanded,
         execution_time_s=t1 - t0,
         heuristic_evals=heuristic_evals,
+        tie_breaks=tie_breaks,
     )
